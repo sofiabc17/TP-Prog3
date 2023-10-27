@@ -94,10 +94,107 @@ class HillClimbing(LocalSearch):
 class HillClimbingReset(LocalSearch):
     """Algoritmo de ascension de colinas con reinicio aleatorio."""
 
-    # COMPLETAR
+    def solve(self, problem: OptProblem):
+        """Resuelve un problema de optimización con ascensión de colinas y reinicio aleatorio.
+
+        Arguments:
+        ==========
+        problem: OptProblem
+            un problema de optimización
+        """
+
+        # Inicio del reloj
+        start = time()
+
+        # Arrancamos del estado inicial
+        actual = problem.init
+        value = problem.obj_val(problem.init)
+
+        self.value = float('-inf')
+
+        while True:
+            # Determinar las acciones que se pueden aplicar
+            # y las diferencias en valor objetivo que resultan
+            diff = problem.val_diff(actual)
+
+            # Buscar las acciones que generan el mayor incremento de valor obj
+            max_acts = [act for act, val in diff.items() if val ==
+                        max(diff.values())]
+
+            # Elegir una acción aleatoria
+            act = choice(max_acts)
+
+            # Retornar si estamos en un óptimo local
+            # (diferencia de valor objetivo no positiva)
+            if diff[act] <= 0:
+
+                if self.value < value:
+                    self.tour = actual
+                    self.value = value
+                    end = time()
+                    self.time = end-start
+                    return
+                
+                else:
+                    actual = problem.random_reset()
+                    value = problem.obj_val(actual)
+
+            # Sino, nos movemos al sucesor
+            else:
+                actual = problem.result(actual, act)
+                value = value + diff[act]
+                self.niters += 1
 
 
 class Tabu(LocalSearch):
     """Algoritmo de busqueda tabu."""
 
-    # COMPLETAR
+    def solve(self, problem: OptProblem):
+        """Resuelve un problema de optimización con búsqueda Tabu.
+
+        Arguments:
+        ==========
+        problem: OptProblem
+            un problema de optimización
+        """
+        # Inicio del reloj
+        start = time()
+
+        # Estado inicial
+        actual = problem.init
+        best = actual
+        best_value = problem.obj_val(problem.init)
+        tabu = []
+
+        # Criterio de parada => cantidad de iteraciones
+        while self.niters < 1000:
+            sucesores = problem.val_diff(actual)
+            no_tabues = {}
+
+            for key, value in sucesores.items():
+                if key not in tabu:
+                    no_tabues[key] = value
+
+            sucesor = [act for act, val in no_tabues.items() if val == max(no_tabues.values())]
+            act = choice(sucesor)
+
+            actual = problem.result(actual, act)
+            value = problem.obj_val(actual)
+
+            if len(tabu) > 25:
+                tabu.pop(0) 
+                tabu.append(act)
+            else:
+                tabu.append(act)
+            
+            self.niters += 1
+
+            if best_value < value:
+                best = actual
+                best_value = value
+
+        self.tour = best
+        self.value = best_value
+        end = time()
+        self.time = end-start
+        return best
